@@ -1,0 +1,247 @@
+import React, { useState } from 'react';
+import { Calendar, Clock } from 'lucide-react';
+
+const TimeEntryApp = () => {
+  // State variables
+  const [entryMode, setEntryMode] = useState('week'); // 'week' or 'project'
+  const [selectedDate, setSelectedDate] = useState(new Date('August 12, 2024'));
+  const [weekHours, setWeekHours] = useState({
+    0: { regular: 8, overtime: 0, notes: '' },
+    1: { regular: 8, overtime: 0, notes: '' },
+    2: { regular: 8, overtime: 1, notes: '' },
+    3: { regular: 8, overtime: 2, notes: '' },
+    4: { regular: 8, overtime: 0, notes: '' },
+    5: { regular: 0, overtime: 0, notes: '' },
+    6: { regular: 0, overtime: 0, notes: '' },
+  });
+  const [projectHours, setProjectHours] = useState({
+    'Project A': { regular: 16, overtime: 0, notes: '' },
+    'Project B': { regular: 16, overtime: 3, notes: 'Urgent deadline' },
+    'Project C': { regular: 8, overtime: 0, notes: '' },
+  });
+
+  // Get week dates starting from selected date
+  const getWeekDates = () => {
+    const dates = [];
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(selectedDate);
+      date.setDate(selectedDate.getDate() - selectedDate.getDay() + i);
+      const formattedDate = `${dayNames[i]} ${date.getMonth() + 1}/${date.getDate()}`;
+      dates.push(formattedDate);
+    }
+    return dates;
+  };
+
+  // Handle date change
+  const changeDate = (daysToAdd) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + daysToAdd);
+    setSelectedDate(newDate);
+  };
+
+  // Update hours for weekly view
+  const updateWeekHours = (day, field, value) => {
+    setWeekHours({
+      ...weekHours,
+      [day]: {
+        ...weekHours[day],
+        [field]: field === 'notes' ? value : parseFloat(value) || 0
+      }
+    });
+  };
+
+  // Update hours for project view
+  const updateProjectHours = (project, field, value) => {
+    setProjectHours({
+      ...projectHours,
+      [project]: {
+        ...projectHours[project],
+        [field]: field === 'notes' ? value : parseFloat(value) || 0
+      }
+    });
+  };
+
+  // Calculate totals
+  const calculateTotals = () => {
+    if (entryMode === 'week') {
+      return Object.values(weekHours).reduce(
+        (acc, day) => ({
+          regular: acc.regular + day.regular,
+          overtime: acc.overtime + day.overtime,
+          total: acc.total + day.regular + day.overtime
+        }),
+        { regular: 0, overtime: 0, total: 0 }
+      );
+    } else {
+      return Object.values(projectHours).reduce(
+        (acc, project) => ({
+          regular: acc.regular + project.regular,
+          overtime: acc.overtime + project.overtime,
+          total: acc.total + project.regular + project.overtime
+        }),
+        { regular: 0, overtime: 0, total: 0 }
+      );
+    }
+  };
+
+  const totals = calculateTotals();
+  const weekDates = getWeekDates();
+
+  return (
+    <div className="flex flex-col bg-gray-50 rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Time Entry</h1>
+        
+        {/* Date Navigation */}
+        <div className="flex items-center space-x-4">
+          <button 
+            className="p-2 bg-gray-200 rounded-full hover:bg-gray-300"
+            onClick={() => changeDate(-7)}
+          >
+            &lt;
+          </button>
+          
+          <div className="flex items-center bg-white px-4 py-2 rounded-lg border border-gray-300">
+            <Calendar className="w-5 h-5 text-blue-600 mr-2" />
+            <span className="text-gray-800 font-medium">
+              Week of {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
+          
+          <button 
+            className="p-2 bg-gray-200 rounded-full hover:bg-gray-300"
+            onClick={() => changeDate(7)}
+          >
+            &gt;
+          </button>
+        </div>
+      </div>
+      
+      {/* Mode Toggle */}
+      <div className="flex bg-gray-200 p-1 rounded-lg w-64 mb-6">
+        <button
+          className={`flex-1 py-2 px-4 rounded-md text-center ${entryMode === 'week' ? 'bg-white shadow-sm font-medium text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+          onClick={() => setEntryMode('week')}
+        >
+          Weekly
+        </button>
+        <button
+          className={`flex-1 py-2 px-4 rounded-md text-center ${entryMode === 'project' ? 'bg-white shadow-sm font-medium text-blue-600' : 'text-gray-600 hover:bg-gray-100'}`}
+          onClick={() => setEntryMode('project')}
+        >
+          Project
+        </button>
+      </div>
+      
+      {/* Time Entry Table */}
+      <div className="bg-white rounded-lg border border-gray-300 overflow-hidden">
+        {/* Table Header */}
+        <div className="grid grid-cols-4 bg-gray-100 border-b border-gray-300 py-3 px-4 font-medium text-gray-700">
+          <div>{entryMode === 'week' ? 'Day' : 'Project'}</div>
+          <div>Regular Hours</div>
+          <div>Overtime</div>
+          <div>Notes</div>
+        </div>
+
+        {/* Table Body */}
+        <div className="divide-y divide-gray-200">
+          {entryMode === 'week' ? (
+            // Weekly View
+            Object.keys(weekHours).map((day, index) => (
+              <div key={day} className="grid grid-cols-4 py-3 px-4 items-center">
+                <div className="font-medium text-gray-800">{weekDates[day]}</div>
+                <div>
+                  <input
+                    type="number"
+                    min="0"
+                    max="24"
+                    className="w-16 p-2 border border-gray-300 rounded"
+                    value={weekHours[day].regular}
+                    onChange={(e) => updateWeekHours(day, 'regular', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    min="0"
+                    max="24"
+                    className="w-16 p-2 border border-gray-300 rounded"
+                    value={weekHours[day].overtime}
+                    onChange={(e) => updateWeekHours(day, 'overtime', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-gray-300 rounded"
+                    value={weekHours[day].notes}
+                    onChange={(e) => updateWeekHours(day, 'notes', e.target.value)}
+                    placeholder="Add notes"
+                  />
+                </div>
+              </div>
+            ))
+          ) : (
+            // Project View
+            Object.keys(projectHours).map((project) => (
+              <div key={project} className="grid grid-cols-4 py-3 px-4 items-center">
+                <div className="font-medium text-gray-800">{project}</div>
+                <div>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-16 p-2 border border-gray-300 rounded"
+                    value={projectHours[project].regular}
+                    onChange={(e) => updateProjectHours(project, 'regular', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-16 p-2 border border-gray-300 rounded"
+                    value={projectHours[project].overtime}
+                    onChange={(e) => updateProjectHours(project, 'overtime', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-gray-300 rounded"
+                    value={projectHours[project].notes}
+                    onChange={(e) => updateProjectHours(project, 'notes', e.target.value)}
+                    placeholder="Add notes"
+                  />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Table Footer - Totals */}
+        <div className="grid grid-cols-4 py-3 px-4 bg-gray-50 border-t border-gray-300 font-medium">
+          <div className="text-gray-800">Total</div>
+          <div className="text-gray-800">{totals.regular} hrs</div>
+          <div className="text-gray-800">{totals.overtime} hrs</div>
+          <div className="text-blue-600">{totals.total} hrs total</div>
+        </div>
+      </div>
+      
+      {/* Action Buttons */}
+      <div className="flex justify-end mt-6 space-x-4">
+        <button className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+          Save Draft
+        </button>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+          <Clock className="w-4 h-4 mr-2" />
+          Submit Hours
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default TimeEntryApp;
